@@ -113,89 +113,121 @@ export default function Upload() {
     });
 
     try {
-      // Check storage space
-      const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-      const availableSpace = storageInfo.limit - storageInfo.used;
-
-      if (totalSize > availableSpace) {
-        throw new Error("Not enough storage space available");
-      }
-
       let completed = 0;
       let failed = 0;
+      const warnings: string[] = [];
+      const failedFiles: string[] = [];
 
-      for (let i = 0; i < files.length; i++) {
+      // Process files in batches to avoid overwhelming storage
+      const batchSize = 2; // Smaller batches for better error handling
+      for (let i = 0; i < files.length; i += batchSize) {
+        const batch = files.slice(i, i + batchSize);
+
         try {
-          await galleryService.uploadPhotos(
+          const result = await galleryService.uploadPhotos(
             batch,
             user.id,
             selectedFolder || undefined,
           );
+
+          // All files in batch succeeded
           completed += batch.length;
+
+          // Check for storage optimization warnings
+          const optimizedFiles = result.filter(
+            (photo) =>
+              photo.tags.includes("storage-limited") ||
+              photo.tags.includes("large-file"),
+          );
+
+          if (optimizedFiles.length > 0) {
+            warnings.push(
+              `${optimizedFiles.map((p) => p.filename).join(", ")} stored as high-quality thumbnails`,
+            );
+          }
         } catch (error) {
-          // Parse error message to handle warnings vs hard failures
           const errorMessage = error.message || "";
 
+          // Check if it's a partial success with warnings
           if (errorMessage.includes("Storage optimizations applied:")) {
-            // These are warnings, not failures - photos were uploaded as thumbnails
+            // Photos were uploaded but with storage optimizations
             completed += batch.length;
-            console.info("Storage optimizations:", errorMessage);
-
-            // Show info toast about optimization
-            toast({
-              title: 'Photos uploaded with optimization',
-              description: 'Some large photos were stored as high-quality thumbnails to optimize storage.',
-              variant: 'default',
-            });
+            warnings.push(
+              errorMessage.split("Storage optimizations applied:\n")[1],
+            );
           } else if (errorMessage.includes("Upload failures:")) {
-            // These are actual failures
-            const failureDetails = errorMessage.split("\n").slice(1);
-            failed += failureDetails.length;
-            failedFiles.push(...failureDetails);
+            // Some files failed, some might have succeeded
+            const lines = errorMessage.split("\n");
+            let inFailures = false;
+            let failureCount = 0;
 
-            // Some files in batch might have succeeded
-            const succeededInBatch = batch.length - failureDetails.length;
-            completed += succeededInBatch;
+            for (const line of lines) {
+              if (line.includes("Upload failures:")) {
+                inFailures = true;
+                continue;
+              }
+              if (inFailures && line.trim()) {
+                failedFiles.push(line);
+                failureCount++;
+              }
+            }
+
+            failed += failureCount;
+            completed += Math.max(0, batch.length - failureCount);
           } else {
-            // Unknown error - treat as batch failure
+            // Complete batch failure
             failed += batch.length;
             batch.forEach((file) =>
               failedFiles.push(`${file.name}: ${errorMessage}`),
             );
           }
         }
-          setUploadProgress(progress);
-          setUploadStats({
-            total: files.length,
-            completed,
-            failed,
-          });
 
-          // Small delay to show progress
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        } catch (error) {
-          console.error(`Failed to upload ${files[i].name}:`, error);
-          failed++;
-          setUploadStats({
-            total: files.length,
-            completed,
-            failed,
-          });
-        }
+        // Update progress
+        const progress = ((i + batch.length) / files.length) * 100;
+        setUploadProgress(Math.min(progress, 100));
+        setUploadStats({
+          total: files.length,
+          completed,
+          failed,
+        });
+
+        // Small delay between batches
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
 
-      // Show completion message
-      if (failed === 0) {
+      // Show completion message with appropriate tone
+      if (failed === 0 && warnings.length === 0) {
         toast({
           title: "Upload complete!",
           description: `Successfully uploaded ${completed} photo${completed !== 1 ? "s" : ""}.`,
         });
-      } else {
+      } else if (failed === 0 && warnings.length > 0) {
         toast({
-          title: "Upload completed with errors",
+          title: "Upload complete with optimizations",
+          description: `${completed} photos uploaded. Some large files stored as high-quality thumbnails.`,
+        });
+      } else if (completed > 0) {
+        toast({
+          title: "Upload partially completed",
           description: `${completed} photos uploaded successfully, ${failed} failed.`,
           variant: "destructive",
         });
+      } else {
+        toast({
+          title: "Upload failed",
+          description:
+            "No photos could be uploaded. Please try again or use smaller images.",
+          variant: "destructive",
+        });
+      }
+
+      // Log detailed information for debugging
+      if (warnings.length > 0) {
+        console.info("Upload warnings:", warnings);
+      }
+      if (failedFiles.length > 0) {
+        console.error("Upload failures:", failedFiles);
       }
 
       // Reload data to reflect changes
