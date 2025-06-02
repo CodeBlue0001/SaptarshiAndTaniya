@@ -310,7 +310,7 @@ export default function Upload() {
                 onFilesSelected={handleFilesSelected}
                 disabled={isUploading}
                 maxFiles={50}
-                maxSize={10 * 1024 * 1024} // 10MB per file
+                maxSize={18 * 1024 * 1024} // 18MB per file
               />
 
               {/* Upload Progress */}
