@@ -1,11 +1,11 @@
-import { Photo, Folder, FaceDetection } from '@/types';
-import { faceDetectionService } from './faceDetectionService';
+import { Photo, Folder, FaceDetection } from "@/types";
+import { faceDetectionService } from "./faceDetectionService";
 
 // Simple UUID generator for cross-platform compatibility
 function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c == 'x' ? r : (r & 0x3 | 0x8);
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c == "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 }
@@ -14,7 +14,7 @@ function generateUUID(): string {
 class StorageManager {
   private static readonly MAX_STORAGE_SIZE = 50 * 1024 * 1024 * 1024; // 50GB virtual limit
   private static readonly BROWSER_STORAGE_LIMIT = 4 * 1024 * 1024; // ~4MB safe limit for localStorage
-  private static readonly PHOTO_CACHE_KEY = 'wedding_gallery_photo_cache';
+  private static readonly PHOTO_CACHE_KEY = "wedding_gallery_photo_cache";
 
   static getStorageQuota(): { used: number; available: number; limit: number } {
     const used = this.getUsedStorage();
@@ -46,13 +46,16 @@ class StorageManager {
     return quota.used + estimatedStorageSize < this.BROWSER_STORAGE_LIMIT;
   }
 
-  static compressImage(canvas: HTMLCanvasElement, quality: number = 0.8): string {
-    return canvas.toDataURL('image/jpeg', quality);
+  static compressImage(
+    canvas: HTMLCanvasElement,
+    quality: number = 0.8,
+  ): string {
+    return canvas.toDataURL("image/jpeg", quality);
   }
 
   static createThumbnail(img: HTMLImageElement, maxSize: number = 200): string {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d')!;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d")!;
 
     // Calculate new dimensions
     let { width, height } = img;
@@ -73,7 +76,7 @@ class StorageManager {
 
     // Draw and compress
     ctx.drawImage(img, 0, 0, width, height);
-    return canvas.toDataURL('image/jpeg', 0.7);
+    return canvas.toDataURL("image/jpeg", 0.7);
   }
 
   static storePhotoData(photoId: string, data: string): boolean {
@@ -93,7 +96,7 @@ class StorageManager {
       localStorage.setItem(this.PHOTO_CACHE_KEY, JSON.stringify(cacheData));
       return false;
     } catch (error) {
-      console.error('Failed to store photo data:', error);
+      console.error("Failed to store photo data:", error);
       return false;
     }
   }
@@ -103,7 +106,7 @@ class StorageManager {
       const cacheData = this.getPhotoCache();
       return cacheData[photoId] || null;
     } catch (error) {
-      console.error('Failed to retrieve photo data:', error);
+      console.error("Failed to retrieve photo data:", error);
       return null;
     }
   }
@@ -114,7 +117,7 @@ class StorageManager {
       delete cacheData[photoId];
       localStorage.setItem(this.PHOTO_CACHE_KEY, JSON.stringify(cacheData));
     } catch (error) {
-      console.error('Failed to delete photo data:', error);
+      console.error("Failed to delete photo data:", error);
     }
   }
 
@@ -134,16 +137,16 @@ class StorageManager {
       const cacheData = this.getPhotoCache();
       const entries = Object.entries(cacheData);
 
-      if (entries.length > 50) { // Keep only 50 most recent photos in cache
+      if (entries.length > 50) {
+        // Keep only 50 most recent photos in cache
         const toKeep = entries.slice(-30); // Keep last 30
         const newCache = Object.fromEntries(toKeep);
         localStorage.setItem(this.PHOTO_CACHE_KEY, JSON.stringify(newCache));
       }
     } catch (error) {
-      console.error('Failed to clear expired data:', error);
+      console.error("Failed to clear expired data:", error);
     }
   }
-}
 }
 
 class GalleryService {
@@ -157,24 +160,69 @@ class GalleryService {
     folderId?: string,
   ): Promise<Photo[]> {
     const photos: Photo[] = [];
+    const failedUploads: { file: File; error: string }[] = [];
+
+    // Check storage quota before starting
+    const quota = StorageManager.getStorageQuota();
+    const totalFileSize = files.reduce((sum, file) => sum + file.size, 0);
+
+    if (quota.used + totalFileSize * 1.5 > 4 * 1024 * 1024) {
+      // 4MB browser limit
+      // Clean up old data first
+      StorageManager.clearExpiredData();
+    }
 
     for (const file of files) {
-      const photo = await this.processFile(file, userId);
-      photos.push(photo);
+      try {
+        // Check if we can store this individual file
+        if (!StorageManager.canStorePhoto(file.size)) {
+          failedUploads.push({
+            file,
+            error:
+              "Storage quota exceeded. Please delete some photos or use smaller images.",
+          });
+          continue;
+        }
 
-      if (folderId) {
-        await this.addPhotoToFolder(photo.id, folderId);
+        const photo = await this.processFile(file, userId);
+        photos.push(photo);
+
+        if (folderId) {
+          await this.addPhotoToFolder(photo.id, folderId);
+        }
+      } catch (error) {
+        console.error(`Failed to process ${file.name}:`, error);
+        failedUploads.push({
+          file,
+          error:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        });
       }
     }
 
-    // Save photos
-    const existingPhotos = this.getStoredPhotos();
-    const updatedPhotos = [...existingPhotos, ...photos];
-    localStorage.setItem(this.PHOTOS_KEY, JSON.stringify(updatedPhotos));
+    // Save photo metadata (not the actual image data)
+    if (photos.length > 0) {
+      try {
+        const existingPhotos = this.getStoredPhotos();
+        const updatedPhotos = [...existingPhotos, ...photos];
+        localStorage.setItem(this.PHOTOS_KEY, JSON.stringify(updatedPhotos));
+      } catch (error) {
+        console.error("Failed to save photo metadata:", error);
+        throw new Error("Failed to save photos. Storage may be full.");
+      }
+    }
 
-    // Process faces for each photo
+    // Process faces for each successfully uploaded photo
     for (const photo of photos) {
       this.processFacesForPhoto(photo);
+    }
+
+    // Report any failures
+    if (failedUploads.length > 0) {
+      const errorMessage = failedUploads
+        .map((f) => `${f.file.name}: ${f.error}`)
+        .join("\n");
+      throw new Error(`Some uploads failed:\n${errorMessage}`);
     }
 
     return photos;
@@ -197,7 +245,10 @@ class GalleryService {
             const thumbnailUrl = StorageManager.createThumbnail(img, 200);
 
             // Try to store full image data
-            const fullImageStored = StorageManager.storePhotoData(photoId, result);
+            const fullImageStored = StorageManager.storePhotoData(
+              photoId,
+              result,
+            );
 
             const photo: Photo = {
               id: photoId,
@@ -206,7 +257,7 @@ class GalleryService {
               thumbnailUrl: thumbnailUrl,
               uploadedBy: userId,
               uploadedAt: new Date(),
-              tags: fullImageStored ? [] : ['storage-limited'], // Tag to indicate storage limitation
+              tags: fullImageStored ? [] : ["storage-limited"], // Tag to indicate storage limitation
               faces: [],
               fileSize: file.size,
               dimensions: {
@@ -216,23 +267,28 @@ class GalleryService {
             };
 
             if (!fullImageStored) {
-              console.warn(`Full image for ${file.name} couldn't be stored due to size limits. Using thumbnail only.`);
+              console.warn(
+                `Full image for ${file.name} couldn't be stored due to size limits. Using thumbnail only.`,
+              );
             }
 
             resolve(photo);
           } catch (error) {
-            reject(new Error(`Failed to process image: ${error instanceof Error ? error.message : 'Unknown error'}`));
+            reject(
+              new Error(
+                `Failed to process image: ${error instanceof Error ? error.message : "Unknown error"}`,
+              ),
+            );
           }
         };
 
-        img.onerror = () => reject(new Error('Failed to load image'));
+        img.onerror = () => reject(new Error("Failed to load image"));
         img.src = result;
       };
 
-      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.onerror = () => reject(new Error("Failed to read file"));
       reader.readAsDataURL(file);
     });
-  }
   }
 
   private async processFacesForPhoto(photo: Photo): Promise<void> {
@@ -316,7 +372,7 @@ class GalleryService {
 
   getPhotoById(id: string): Photo | null {
     const photos = this.getStoredPhotos();
-    const photo = photos.find(photo => photo.id === id);
+    const photo = photos.find((photo) => photo.id === id);
 
     if (photo) {
       // Try to get full resolution image from storage
@@ -337,23 +393,23 @@ class GalleryService {
 
       // Remove from photos
       const photos = this.getStoredPhotos();
-      const filteredPhotos = photos.filter(p => p.id !== photoId);
+      const filteredPhotos = photos.filter((p) => p.id !== photoId);
       localStorage.setItem(this.PHOTOS_KEY, JSON.stringify(filteredPhotos));
 
       // Remove from faces
       const faces = this.getStoredFaces();
-      const filteredFaces = faces.filter(f => f.photoId !== photoId);
+      const filteredFaces = faces.filter((f) => f.photoId !== photoId);
       localStorage.setItem(this.FACES_KEY, JSON.stringify(filteredFaces));
 
       // Remove from folders
       const folders = this.getStoredFolders();
-      folders.forEach(folder => {
-        folder.photos = folder.photos.filter(id => id !== photoId);
+      folders.forEach((folder) => {
+        folder.photos = folder.photos.filter((id) => id !== photoId);
       });
       localStorage.setItem(this.FOLDERS_KEY, JSON.stringify(folders));
     } catch (error) {
-      console.error('Failed to delete photo:', error);
-      throw new Error('Failed to delete photo. Please try again.');
+      console.error("Failed to delete photo:", error);
+      throw new Error("Failed to delete photo. Please try again.");
     }
   }
 
@@ -372,7 +428,7 @@ class GalleryService {
       used: this.getStorageUsed(),
       browserUsed: quota.used,
       limit: quota.limit,
-      browserLimit: StorageManager['BROWSER_STORAGE_LIMIT'],
+      browserLimit: 4 * 1024 * 1024, // 4MB browser limit
       percentage: (this.getStorageUsed() / quota.limit) * 100,
     };
   }
