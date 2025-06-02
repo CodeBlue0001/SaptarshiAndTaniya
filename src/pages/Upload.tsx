@@ -384,6 +384,14 @@ export default function Upload() {
                   download photos
                 </div>
               </div>
+
+              <div className="flex items-start gap-2">
+                <HardDrive className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <strong>Large Files:</strong> Photos over 10MB are stored as
+                  high-quality thumbnails to optimize browser storage
+                </div>
+              </div>
             </CardContent>
           </Card>
 
