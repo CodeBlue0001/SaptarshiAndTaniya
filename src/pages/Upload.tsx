@@ -62,13 +62,14 @@ export default function Upload() {
     const loadedFolders = galleryService.getFolders();
     setFolders(loadedFolders);
 
-    // Calculate storage info
-    const used = galleryService.getStorageUsed();
-    const limit = galleryService.getStorageLimit();
+    // Get detailed storage info
+    const detailedStorageInfo = galleryService.getStorageInfo();
     setStorageInfo({
-      used,
-      limit,
-      percentage: (used / limit) * 100,
+      used: detailedStorageInfo.used,
+      limit: detailedStorageInfo.limit,
+      percentage: detailedStorageInfo.percentage,
+      browserUsed: detailedStorageInfo.browserUsed,
+      browserLimit: detailedStorageInfo.browserLimit,
     });
   };
 
