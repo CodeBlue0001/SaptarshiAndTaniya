@@ -1,7 +1,7 @@
 import React from "react";
-import { PhotoGallery } from '@/components/gallery/PhotoGallery';
-import { StorageMonitor } from '@/components/gallery/StorageMonitor';
-import { Card, CardContent } from '@/components/ui/card';
+import { PhotoGallery } from "@/components/gallery/PhotoGallery";
+import { StorageMonitor } from "@/components/gallery/StorageMonitor";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -152,7 +152,6 @@ export default function Gallery() {
                         Upload Photos
                       </Link>
                     </Button>
-                  </div>
                   </div>
                 ) : (
                   <div className="text-center space-y-3">
