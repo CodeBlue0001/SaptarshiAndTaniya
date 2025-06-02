@@ -24,17 +24,17 @@ export default defineConfig(({ mode }) => ({
     outDir: "dist",
     assetsDir: "assets",
     sourcemap: false,
-    minify: "terser",
+    minify: "esbuild", // Use esbuild for better cross-platform compatibility
     target: "es2015", // Better Windows browser compatibility
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ["react", "react-dom"],
-          ui: ["@radix-ui/react-dialog", "@radix-ui/react-dropdown-menu"],
-          router: ["react-router-dom"],
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
         },
       },
     },
+  },
   },
   optimizeDeps: {
     include: ["react", "react-dom", "react-router-dom"],
