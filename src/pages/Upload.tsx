@@ -357,7 +357,7 @@ export default function Upload() {
                 <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                 <div className="text-sm">
                   <strong>High Quality:</strong> Upload original resolution
-                  photos for best results
+                  photos up to 18MB for best results
                 </div>
               </div>
 
