@@ -1,13 +1,149 @@
-import { Photo, Folder, FaceDetection } from "@/types";
-import { faceDetectionService } from "./faceDetectionService";
+import { Photo, Folder, FaceDetection } from '@/types';
+import { faceDetectionService } from './faceDetectionService';
 
 // Simple UUID generator for cross-platform compatibility
 function generateUUID(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c == "x" ? r : (r & 0x3) | 0x8;
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c == 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
+}
+
+// Storage management utilities
+class StorageManager {
+  private static readonly MAX_STORAGE_SIZE = 50 * 1024 * 1024 * 1024; // 50GB virtual limit
+  private static readonly BROWSER_STORAGE_LIMIT = 4 * 1024 * 1024; // ~4MB safe limit for localStorage
+  private static readonly PHOTO_CACHE_KEY = 'wedding_gallery_photo_cache';
+
+  static getStorageQuota(): { used: number; available: number; limit: number } {
+    const used = this.getUsedStorage();
+    return {
+      used,
+      available: this.MAX_STORAGE_SIZE - used,
+      limit: this.MAX_STORAGE_SIZE,
+    };
+  }
+
+  static getUsedStorage(): number {
+    try {
+      // Calculate size of all localStorage data
+      let totalSize = 0;
+      for (let key in localStorage) {
+        if (localStorage.hasOwnProperty(key)) {
+          totalSize += localStorage[key].length + key.length;
+        }
+      }
+      return totalSize * 2; // Rough UTF-16 size estimation
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  static canStorePhoto(fileSize: number): boolean {
+    const quota = this.getStorageQuota();
+    const estimatedStorageSize = fileSize * 1.5; // Base64 overhead + metadata
+    return quota.used + estimatedStorageSize < this.BROWSER_STORAGE_LIMIT;
+  }
+
+  static compressImage(canvas: HTMLCanvasElement, quality: number = 0.8): string {
+    return canvas.toDataURL('image/jpeg', quality);
+  }
+
+  static createThumbnail(img: HTMLImageElement, maxSize: number = 200): string {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+
+    // Calculate new dimensions
+    let { width, height } = img;
+    if (width > height) {
+      if (width > maxSize) {
+        height = (height * maxSize) / width;
+        width = maxSize;
+      }
+    } else {
+      if (height > maxSize) {
+        width = (width * maxSize) / height;
+        height = maxSize;
+      }
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Draw and compress
+    ctx.drawImage(img, 0, 0, width, height);
+    return canvas.toDataURL('image/jpeg', 0.7);
+  }
+
+  static storePhotoData(photoId: string, data: string): boolean {
+    try {
+      // Try to store in localStorage first
+      const cacheData = this.getPhotoCache();
+      cacheData[photoId] = data;
+
+      const serialized = JSON.stringify(cacheData);
+      if (serialized.length < this.BROWSER_STORAGE_LIMIT) {
+        localStorage.setItem(this.PHOTO_CACHE_KEY, serialized);
+        return true;
+      }
+
+      // If too large, store only metadata and show error
+      delete cacheData[photoId];
+      localStorage.setItem(this.PHOTO_CACHE_KEY, JSON.stringify(cacheData));
+      return false;
+    } catch (error) {
+      console.error('Failed to store photo data:', error);
+      return false;
+    }
+  }
+
+  static getPhotoData(photoId: string): string | null {
+    try {
+      const cacheData = this.getPhotoCache();
+      return cacheData[photoId] || null;
+    } catch (error) {
+      console.error('Failed to retrieve photo data:', error);
+      return null;
+    }
+  }
+
+  static deletePhotoData(photoId: string): void {
+    try {
+      const cacheData = this.getPhotoCache();
+      delete cacheData[photoId];
+      localStorage.setItem(this.PHOTO_CACHE_KEY, JSON.stringify(cacheData));
+    } catch (error) {
+      console.error('Failed to delete photo data:', error);
+    }
+  }
+
+  private static getPhotoCache(): Record<string, string> {
+    try {
+      const cached = localStorage.getItem(this.PHOTO_CACHE_KEY);
+      return cached ? JSON.parse(cached) : {};
+    } catch (error) {
+      return {};
+    }
+  }
+
+  static clearExpiredData(): void {
+    // In a real app, this would clear old cached photos
+    // For now, we'll implement a simple LRU-like cleanup
+    try {
+      const cacheData = this.getPhotoCache();
+      const entries = Object.entries(cacheData);
+
+      if (entries.length > 50) { // Keep only 50 most recent photos in cache
+        const toKeep = entries.slice(-30); // Keep last 30
+        const newCache = Object.fromEntries(toKeep);
+        localStorage.setItem(this.PHOTO_CACHE_KEY, JSON.stringify(newCache));
+      }
+    } catch (error) {
+      console.error('Failed to clear expired data:', error);
+    }
+  }
+}
 }
 
 class GalleryService {
@@ -51,35 +187,52 @@ class GalleryService {
       reader.onload = async (e) => {
         const result = e.target?.result as string;
 
-        // Create image to get dimensions
+        // Create image to get dimensions and generate thumbnail
         const img = new Image();
         img.onload = () => {
-          const photo: Photo = {
-            id: generateUUID(),
-            filename: file.name,
-            url: result,
-            thumbnailUrl: result, // In a real app, you'd generate thumbnails
-            uploadedBy: userId,
-            uploadedAt: new Date(),
-            tags: [],
-            faces: [],
-            fileSize: file.size,
-            dimensions: {
-              width: img.width,
-              height: img.height,
-            },
-          };
+          try {
+            const photoId = generateUUID();
 
-          resolve(photo);
+            // Generate compressed thumbnail
+            const thumbnailUrl = StorageManager.createThumbnail(img, 200);
+
+            // Try to store full image data
+            const fullImageStored = StorageManager.storePhotoData(photoId, result);
+
+            const photo: Photo = {
+              id: photoId,
+              filename: file.name,
+              url: fullImageStored ? result : thumbnailUrl, // Fallback to thumbnail if full image can't be stored
+              thumbnailUrl: thumbnailUrl,
+              uploadedBy: userId,
+              uploadedAt: new Date(),
+              tags: fullImageStored ? [] : ['storage-limited'], // Tag to indicate storage limitation
+              faces: [],
+              fileSize: file.size,
+              dimensions: {
+                width: img.width,
+                height: img.height,
+              },
+            };
+
+            if (!fullImageStored) {
+              console.warn(`Full image for ${file.name} couldn't be stored due to size limits. Using thumbnail only.`);
+            }
+
+            resolve(photo);
+          } catch (error) {
+            reject(new Error(`Failed to process image: ${error instanceof Error ? error.message : 'Unknown error'}`));
+          }
         };
 
-        img.onerror = () => reject(new Error("Failed to load image"));
+        img.onerror = () => reject(new Error('Failed to load image'));
         img.src = result;
       };
 
-      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.onerror = () => reject(new Error('Failed to read file'));
       reader.readAsDataURL(file);
     });
+  }
   }
 
   private async processFacesForPhoto(photo: Photo): Promise<void> {
@@ -163,26 +316,45 @@ class GalleryService {
 
   getPhotoById(id: string): Photo | null {
     const photos = this.getStoredPhotos();
-    return photos.find((photo) => photo.id === id) || null;
+    const photo = photos.find(photo => photo.id === id);
+
+    if (photo) {
+      // Try to get full resolution image from storage
+      const fullImageData = StorageManager.getPhotoData(id);
+      if (fullImageData && photo.url === photo.thumbnailUrl) {
+        // Update with full image if available
+        photo.url = fullImageData;
+      }
+    }
+
+    return photo || null;
   }
 
   async deletePhoto(photoId: string): Promise<void> {
-    // Remove from photos
-    const photos = this.getStoredPhotos();
-    const filteredPhotos = photos.filter((p) => p.id !== photoId);
-    localStorage.setItem(this.PHOTOS_KEY, JSON.stringify(filteredPhotos));
+    try {
+      // Remove photo data from cache
+      StorageManager.deletePhotoData(photoId);
 
-    // Remove from faces
-    const faces = this.getStoredFaces();
-    const filteredFaces = faces.filter((f) => f.photoId !== photoId);
-    localStorage.setItem(this.FACES_KEY, JSON.stringify(filteredFaces));
+      // Remove from photos
+      const photos = this.getStoredPhotos();
+      const filteredPhotos = photos.filter(p => p.id !== photoId);
+      localStorage.setItem(this.PHOTOS_KEY, JSON.stringify(filteredPhotos));
 
-    // Remove from folders
-    const folders = this.getStoredFolders();
-    folders.forEach((folder) => {
-      folder.photos = folder.photos.filter((id) => id !== photoId);
-    });
-    localStorage.setItem(this.FOLDERS_KEY, JSON.stringify(folders));
+      // Remove from faces
+      const faces = this.getStoredFaces();
+      const filteredFaces = faces.filter(f => f.photoId !== photoId);
+      localStorage.setItem(this.FACES_KEY, JSON.stringify(filteredFaces));
+
+      // Remove from folders
+      const folders = this.getStoredFolders();
+      folders.forEach(folder => {
+        folder.photos = folder.photos.filter(id => id !== photoId);
+      });
+      localStorage.setItem(this.FOLDERS_KEY, JSON.stringify(folders));
+    } catch (error) {
+      console.error('Failed to delete photo:', error);
+      throw new Error('Failed to delete photo. Please try again.');
+    }
   }
 
   getStorageUsed(): number {
@@ -191,7 +363,18 @@ class GalleryService {
   }
 
   getStorageLimit(): number {
-    return 50 * 1024 * 1024 * 1024; // 50GB in bytes
+    return StorageManager.getStorageQuota().limit;
+  }
+
+  getStorageInfo() {
+    const quota = StorageManager.getStorageQuota();
+    return {
+      used: this.getStorageUsed(),
+      browserUsed: quota.used,
+      limit: quota.limit,
+      browserLimit: StorageManager['BROWSER_STORAGE_LIMIT'],
+      percentage: (this.getStorageUsed() / quota.limit) * 100,
+    };
   }
 
   private getStoredPhotos(): Photo[] {
