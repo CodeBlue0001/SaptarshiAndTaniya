@@ -14,7 +14,8 @@
     "preview": "vite preview",
     "serve": "vite preview --host",
     "build:windows": "npm run build",
-    "dev:windows": "npm run dev"
+    "dev:windows": "npm run dev",
+    "package:windows": "node scripts/create-windows-package.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
