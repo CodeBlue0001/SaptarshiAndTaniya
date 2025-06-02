@@ -43,6 +43,12 @@ class StorageManager {
   static canStorePhoto(fileSize: number): boolean {
     const quota = this.getStorageQuota();
     const estimatedStorageSize = fileSize * 1.5; // Base64 overhead + metadata
+
+    // For files larger than 10MB, we'll always use thumbnail fallback to manage storage
+    if (fileSize > 10 * 1024 * 1024) {
+      return false; // Force thumbnail storage for large files (>10MB)
+    }
+
     return quota.used + estimatedStorageSize < this.BROWSER_STORAGE_LIMIT;
   }
 
