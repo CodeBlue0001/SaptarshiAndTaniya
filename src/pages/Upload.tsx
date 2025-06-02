@@ -46,6 +46,8 @@ export default function Upload() {
     used: 0,
     limit: 0,
     percentage: 0,
+    browserUsed: 0,
+    browserLimit: 0,
   });
 
   // Redirect if not authenticated
