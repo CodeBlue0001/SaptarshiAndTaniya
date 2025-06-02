@@ -22,7 +22,7 @@ interface FileWithPreview extends File {
 export const FileUpload: React.FC<FileUploadProps> = ({
   onFilesSelected,
   maxFiles = 20,
-  maxSize = 10 * 1024 * 1024, // 10MB
+  maxSize = 18 * 1024 * 1024, // 18MB
   accept = {
     "image/*": [".jpeg", ".jpg", ".png", ".gif", ".bmp", ".webp"],
   },
@@ -141,7 +141,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               Max {maxFiles} files, {(maxSize / (1024 * 1024)).toFixed(0)}MB
-              each
+              each (18MB limit)
             </p>
           </div>
         </div>
