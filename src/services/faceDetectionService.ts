@@ -1,4 +1,3 @@
-import * as faceapi from "face-api.js";
 import { FaceDetection, Person, Photo } from "@/types";
 
 // Simple UUID generator for cross-platform compatibility
