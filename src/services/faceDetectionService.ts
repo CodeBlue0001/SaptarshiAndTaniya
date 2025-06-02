@@ -1,6 +1,14 @@
 import * as faceapi from "face-api.js";
 import { FaceDetection, Person, Photo } from "@/types";
-import { v4 as uuidv4 } from "uuid";
+
+// Simple UUID generator for cross-platform compatibility
+function generateUUID(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c == "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 class FaceDetectionService {
   private isInitialized = false;
@@ -51,7 +59,7 @@ class FaceDetectionService {
 
       for (let i = 0; i < numFaces; i++) {
         const detection: FaceDetection = {
-          id: uuidv4(),
+          id: generateUUID(),
           photoId,
           boundingBox: {
             x: Math.random() * (imageElement.width - 100),
@@ -99,7 +107,7 @@ class FaceDetectionService {
       } else {
         // Create new person
         const newPerson: Person = {
-          id: uuidv4(),
+          id: generateUUID(),
           name: `Person ${persons.length + 1}`,
           photos: [face.photoId],
           createdAt: new Date(),
@@ -117,7 +125,7 @@ class FaceDetectionService {
     const persons = this.getStoredPersons();
 
     const newPerson: Person = {
-      id: uuidv4(),
+      id: generateUUID(),
       name,
       photos: [],
       createdAt: new Date(),

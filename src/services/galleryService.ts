@@ -1,6 +1,14 @@
 import { Photo, Folder, FaceDetection } from "@/types";
-import { v4 as uuidv4 } from "uuid";
 import { faceDetectionService } from "./faceDetectionService";
+
+// Simple UUID generator for cross-platform compatibility
+function generateUUID(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c == "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 class GalleryService {
   private readonly PHOTOS_KEY = "wedding_gallery_photos";
@@ -47,7 +55,7 @@ class GalleryService {
         const img = new Image();
         img.onload = () => {
           const photo: Photo = {
-            id: uuidv4(),
+            id: generateUUID(),
             filename: file.name,
             url: result,
             thumbnailUrl: result, // In a real app, you'd generate thumbnails
@@ -103,7 +111,7 @@ class GalleryService {
 
   async createFolder(name: string, userId: string): Promise<Folder> {
     const folder: Folder = {
-      id: uuidv4(),
+      id: generateUUID(),
       name,
       photos: [],
       createdAt: new Date(),
