@@ -127,14 +127,43 @@ export default function Upload() {
       for (let i = 0; i < files.length; i++) {
         try {
           await galleryService.uploadPhotos(
-            [files[i]],
+            batch,
             user.id,
             selectedFolder || undefined,
           );
-          completed++;
+          completed += batch.length;
+        } catch (error) {
+          // Parse error message to handle warnings vs hard failures
+          const errorMessage = error.message || "";
 
-          // Update progress
-          const progress = ((i + 1) / files.length) * 100;
+          if (errorMessage.includes("Storage optimizations applied:")) {
+            // These are warnings, not failures - photos were uploaded as thumbnails
+            completed += batch.length;
+            console.info("Storage optimizations:", errorMessage);
+
+            // Show info toast about optimization
+            toast({
+              title: 'Photos uploaded with optimization',
+              description: 'Some large photos were stored as high-quality thumbnails to optimize storage.',
+              variant: 'default',
+            });
+          } else if (errorMessage.includes("Upload failures:")) {
+            // These are actual failures
+            const failureDetails = errorMessage.split("\n").slice(1);
+            failed += failureDetails.length;
+            failedFiles.push(...failureDetails);
+
+            // Some files in batch might have succeeded
+            const succeededInBatch = batch.length - failureDetails.length;
+            completed += succeededInBatch;
+          } else {
+            // Unknown error - treat as batch failure
+            failed += batch.length;
+            batch.forEach((file) =>
+              failedFiles.push(`${file.name}: ${errorMessage}`),
+            );
+          }
+        }
           setUploadProgress(progress);
           setUploadStats({
             total: files.length,
