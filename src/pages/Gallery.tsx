@@ -1,6 +1,7 @@
 import React from "react";
-import { PhotoGallery } from "@/components/gallery/PhotoGallery";
-import { Card, CardContent } from "@/components/ui/card";
+import { PhotoGallery } from '@/components/gallery/PhotoGallery';
+import { StorageMonitor } from '@/components/gallery/StorageMonitor';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -143,25 +144,7 @@ export default function Gallery() {
               <CardContent className="p-4">
                 {isAuthenticated ? (
                   <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">
-                          Storage Used
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {formatStorageSize(storageInfo.used)} /{" "}
-                          {formatStorageSize(storageInfo.limit)}
-                        </span>
-                      </div>
-                      <Progress
-                        value={storageInfo.percentage}
-                        className="h-2"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {(100 - storageInfo.percentage).toFixed(1)}% storage
-                        remaining
-                      </p>
-                    </div>
+                    <StorageMonitor onClearCache={loadGalleryData} />
 
                     <Button asChild className="w-full">
                       <Link to="/upload">
@@ -169,6 +152,7 @@ export default function Gallery() {
                         Upload Photos
                       </Link>
                     </Button>
+                  </div>
                   </div>
                 ) : (
                   <div className="text-center space-y-3">

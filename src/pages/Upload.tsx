@@ -343,6 +343,9 @@ export default function Upload() {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Storage Monitor */}
+          <StorageMonitor onClearCache={loadData} />
+
           {/* Upload Tips */}
           <Card>
             <CardHeader>
