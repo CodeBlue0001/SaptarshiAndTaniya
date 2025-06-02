@@ -302,7 +302,7 @@ export default function Upload() {
               </CardTitle>
               <CardDescription>
                 Select multiple photos to upload. Supported formats: JPEG, PNG,
-                GIF, WebP
+                GIF, WebP (max 18MB per file)
               </CardDescription>
             </CardHeader>
             <CardContent>
