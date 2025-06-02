@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, Link } from "react-router-dom";
 import { FileUpload } from "@/components/ui/file-upload";
+import { StorageMonitor } from "@/components/gallery/StorageMonitor";
 import { Button } from "@/components/ui/button";
 import {
   Card,
