@@ -177,7 +177,7 @@ export const StorageMonitor: React.FC<StorageMonitorProps> = ({
               • Large photos are stored as compressed thumbnails when space is
               low
             </li>
-            <li>• Virtual gallery tracks total photo sizes (50GB limit)</li>
+            <li>• Virtual gallery tracks total photo sizes (70GB limit)</li>
             <li>• Clearing cache removes photo data but keeps metadata</li>
           </ul>
         </div>
