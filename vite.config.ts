@@ -6,27 +6,27 @@ import path from "path";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "0.0.0.0",           // Allow access from LAN/external devices
-    port: 18012,                // Default port
-    strictPort: false,         // Use next port if 8080 is busy
-    
+    port: 18012,               // Default port
+    strictPort: false,         // Use next port if 18012 is busy
+    allowedHosts: ['saptarshiandtaniya.onrender.com'], // ✅ Allow render domain
   },
   preview: {
-    host: "0.0.0.0",           // Preview server also accessible externally
+    host: "0.0.0.0",
     port: 4173,
     strictPort: false,
   },
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"), // Shortcut for imports like @/components/...
+      "@": path.resolve(__dirname, "./src"),
     },
   },
   build: {
     outDir: "dist",
     assetsDir: "assets",
     sourcemap: false,
-    minify: "esbuild",         // Fast build with esbuild
-    target: "es2015",          // Broad browser support
+    minify: "esbuild",
+    target: "es2015",
     rollupOptions: {
       output: {
         manualChunks: {
