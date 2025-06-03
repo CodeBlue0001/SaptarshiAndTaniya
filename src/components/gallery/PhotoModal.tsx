@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Photo } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
@@ -79,6 +79,9 @@ export const PhotoModal: React.FC<PhotoModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-7xl w-full h-[90vh] p-0 overflow-hidden">
+        <DialogTitle className="sr-only">
+          Photo Viewer: {photo.filename}
+        </DialogTitle>
         <div className="flex h-full">
           {/* Image area */}
           <div className="flex-1 relative bg-black flex items-center justify-center">
