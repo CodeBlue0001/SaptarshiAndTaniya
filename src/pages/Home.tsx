@@ -20,6 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { galleryService } from "@/services/galleryService";
+import { SlidingBackgrounds } from "@/components/gallery/SlidingBackgrounds";
 
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
