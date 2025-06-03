@@ -5,27 +5,27 @@ import path from "path";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "::",
-    port: 8080,
-    strictPort: false, // Try next port if 8080 is busy (Windows compatibility)
+    host: "0.0.0.0",           // Allow access from LAN/external devices
+    port: 8080,                // Default port
+    strictPort: false,         // Use next port if 8080 is busy
   },
   preview: {
+    host: "0.0.0.0",           // Preview server also accessible externally
     port: 4173,
-    host: "::",
     strictPort: false,
   },
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(__dirname, "./src"), // Shortcut for imports like @/components/...
     },
   },
   build: {
     outDir: "dist",
     assetsDir: "assets",
     sourcemap: false,
-    minify: "esbuild", // Use esbuild for better cross-platform compatibility
-    target: "es2015", // Better Windows browser compatibility
+    minify: "esbuild",         // Fast build with esbuild
+    target: "es2015",          // Broad browser support
     rollupOptions: {
       output: {
         manualChunks: {
