@@ -48,10 +48,8 @@ export const Header: React.FC = () => {
             <div className="flex items-center gap-2">
               <Heart className="w-8 h-8 text-primary fill-current" />
               <div>
-                <h1 className="text-xl font-bold">Wedding Gallery</h1>
-                <p className="text-xs text-muted-foreground">
-                  Memories Forever
-                </p>
+                <h1 className="text-xl font-bold">Saptarshi & Taniya</h1>
+                <p className="text-xs text-muted-foreground">Wedding Gallery</p>
               </div>
             </div>
           </Link>
