@@ -6,7 +6,7 @@ import path from "path";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "0.0.0.0",           // Allow access from LAN/external devices
-    port: 18012,               // Default port
+    port: 8080,               // Default port
     strictPort: false,         // Use next port if 18012 is busy
     allowedHosts: ['saptarshiandtaniya.onrender.com'], // ✅ Allow render domain
   },
