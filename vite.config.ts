@@ -23,8 +23,6 @@ export default defineConfig(({ mode }) => ({
     react({
       // Fast refresh configuration
       fastRefresh: true,
-      // JSX runtime
-      jsxImportSource: "@emotion/react",
     }),
   ],
   resolve: {
