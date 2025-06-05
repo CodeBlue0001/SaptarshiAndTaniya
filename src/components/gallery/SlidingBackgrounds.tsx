@@ -48,17 +48,22 @@ export const SlidingBackgrounds: React.FC<SlidingBackgroundsProps> = ({
   const [isManageOpen, setIsManageOpen] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Load backgrounds from localStorage
+  // Load backgrounds from localStorage with error handling
   React.useEffect(() => {
     const loadBackgrounds = () => {
       try {
         const stored = localStorage.getItem("wedding_gallery_backgrounds");
         if (stored) {
           const parsedBackgrounds = JSON.parse(stored);
-          setBackgrounds(parsedBackgrounds);
-        } else {
-          // Add some default beautiful wedding backgrounds
-          const defaultBackgrounds = [
+          // Validate the data structure
+          if (Array.isArray(parsedBackgrounds)) {
+            setBackgrounds(parsedBackgrounds);
+            return;
+          }
+        }
+
+        // Add some default beautiful wedding backgrounds
+        const defaultBackgrounds = [
             {
               id: "default-1",
               url:
@@ -169,27 +174,59 @@ export const SlidingBackgrounds: React.FC<SlidingBackgroundsProps> = ({
 
       const reader = new FileReader();
       reader.onload = (e) => {
-        const result = e.target?.result as string;
-        const newBackground: BackgroundImage = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          url: result,
-          name: file.name,
-          uploadedAt: new Date(),
-        };
+        try {
+          const result = e.target?.result as string;
 
-        setBackgrounds((prev) => {
-          const updated = [...prev, newBackground];
-          localStorage.setItem(
-            "wedding_gallery_backgrounds",
-            JSON.stringify(updated),
-          );
-          return updated;
-        });
+          // Validate the result
+          if (!result || typeof result !== 'string') {
+            throw new Error('Invalid file data');
+          }
 
-        toast({
-          title: "Background added",
-          description: `${file.name} has been added to the slideshow.`,
-        });
+          const newBackground: BackgroundImage = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            url: result,
+            name: file.name,
+            uploadedAt: new Date(),
+          };
+
+          setBackgrounds((prev) => {
+            try {
+              const updated = [...prev, newBackground];
+
+              // Check localStorage space before saving
+              const testData = JSON.stringify(updated);
+              if (testData.length > 4 * 1024 * 1024) { // 4MB limit
+                throw new Error('Storage limit exceeded');
+              }
+
+              localStorage.setItem(
+                "wedding_gallery_backgrounds",
+                testData,
+              );
+              return updated;
+            } catch (storageError) {
+              console.error('Failed to save backgrounds:', storageError);
+              toast({
+                title: "Storage warning",
+                description: "Background saved temporarily. Clear some data to make it permanent.",
+                variant: "destructive",
+              });
+              return [...prev, newBackground]; // Still add to state, just don't persist
+            }
+          });
+
+          toast({
+            title: "Background added",
+            description: `${file.name} has been added to the slideshow.`,
+          });
+        } catch (error) {
+          console.error('Failed to process background image:', error);
+          toast({
+            title: "Upload failed",
+            description: `Failed to process ${file.name}. Please try a smaller image.`,
+            variant: "destructive",
+          });
+        }
       };
 
       reader.onerror = () => {

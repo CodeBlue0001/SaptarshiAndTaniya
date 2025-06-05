@@ -277,6 +277,10 @@ class GalleryService {
             // Always generate thumbnail first (ensures we have something to show)
             const thumbnailUrl = StorageManager.createThumbnail(img, 200);
 
+            // Clean up image reference to free memory
+            img.onload = null;
+            img.onerror = null;
+
             // Determine storage strategy based on file size and available space
             let fullImageStored = false;
             let storageStrategy = "thumbnail"; // default to thumbnail
@@ -325,12 +329,29 @@ class GalleryService {
           }
         };
 
-        img.onerror = () => reject(new Error("Failed to load image"));
+        img.onerror = () => {
+          // Clean up on error
+          img.onload = null;
+          img.onerror = null;
+          reject(new Error("Failed to load image"));
+        };
         img.src = result;
       };
 
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.readAsDataURL(file);
+      reader.onerror = () => {
+        // Clean up reader on error
+        reader.onload = null;
+        reader.onerror = null;
+        reject(new Error("Failed to read file"));
+      };
+
+      try {
+        reader.readAsDataURL(file);
+      } catch (error) {
+        reader.onload = null;
+        reader.onerror = null;
+        reject(new Error("Failed to start file reading"));
+      }
     });
   }
 
