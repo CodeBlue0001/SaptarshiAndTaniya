@@ -149,8 +149,42 @@ class StorageManager {
         const newCache = Object.fromEntries(toKeep);
         localStorage.setItem(this.PHOTO_CACHE_KEY, JSON.stringify(newCache));
       }
+
+      // Also clear other potential storage hogs
+      this.clearOtherStorageData();
     } catch (error) {
       console.error("Failed to clear expired data:", error);
+      // If cleanup fails, try emergency cleanup
+      try {
+        localStorage.removeItem(this.PHOTO_CACHE_KEY);
+        console.log("Emergency cleanup: cleared photo cache");
+      } catch (emergencyError) {
+        console.error("Emergency cleanup failed:", emergencyError);
+      }
+    }
+  }
+
+  private static clearOtherStorageData(): void {
+    try {
+      // Clear old face detection data if it gets too large
+      const facesData = localStorage.getItem("wedding_gallery_faces");
+      if (facesData && facesData.length > 1024 * 1024) {
+        // 1MB
+        console.log("Clearing large face detection cache");
+        localStorage.removeItem("wedding_gallery_faces");
+      }
+
+      // Clear old background data if needed
+      const backgroundData = localStorage.getItem(
+        "wedding_gallery_backgrounds",
+      );
+      if (backgroundData && backgroundData.length > 2 * 1024 * 1024) {
+        // 2MB
+        console.log("Clearing large background cache");
+        localStorage.removeItem("wedding_gallery_backgrounds");
+      }
+    } catch (error) {
+      console.error("Failed to clear other storage data:", error);
     }
   }
 }
@@ -277,6 +311,10 @@ class GalleryService {
             // Always generate thumbnail first (ensures we have something to show)
             const thumbnailUrl = StorageManager.createThumbnail(img, 200);
 
+            // Clean up image reference to free memory
+            img.onload = null;
+            img.onerror = null;
+
             // Determine storage strategy based on file size and available space
             let fullImageStored = false;
             let storageStrategy = "thumbnail"; // default to thumbnail
@@ -325,12 +363,29 @@ class GalleryService {
           }
         };
 
-        img.onerror = () => reject(new Error("Failed to load image"));
+        img.onerror = () => {
+          // Clean up on error
+          img.onload = null;
+          img.onerror = null;
+          reject(new Error("Failed to load image"));
+        };
         img.src = result;
       };
 
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.readAsDataURL(file);
+      reader.onerror = () => {
+        // Clean up reader on error
+        reader.onload = null;
+        reader.onerror = null;
+        reject(new Error("Failed to read file"));
+      };
+
+      try {
+        reader.readAsDataURL(file);
+      } catch (error) {
+        reader.onload = null;
+        reader.onerror = null;
+        reject(new Error("Failed to start file reading"));
+      }
     });
   }
 

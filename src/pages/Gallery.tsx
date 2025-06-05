@@ -27,10 +27,17 @@ export default function Gallery() {
   });
 
   React.useEffect(() => {
-    loadGalleryData();
+    // Add small delay to prevent rapid successive calls
+    const timeoutId = setTimeout(() => {
+      loadGalleryData();
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const loadGalleryData = async () => {
+    if (isLoading) return; // Prevent concurrent loading
+
     setIsLoading(true);
     try {
       // Load photos
