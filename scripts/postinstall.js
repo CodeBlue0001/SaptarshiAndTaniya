@@ -1,38 +1,38 @@
-const { execSync } = require("child_process");
-const os = require("os");
+import { execSync } from 'node:child_process';
+import { platform, arch } from 'node:os';
 
 function installPlatformSpecificDependencies() {
-  const platform = os.platform();
-  const arch = os.arch();
+  const currentPlatform = platform();
+  const currentArch = arch();
 
-  console.log(`Detected platform: ${platform} ${arch}`);
+  console.log(`Detected platform: ${currentPlatform} ${currentArch}`);
 
   try {
     // Install platform-specific rollup binaries
-    if (platform === "linux" && arch === "x64") {
+    if (currentPlatform === "linux" && currentArch === "x64") {
       console.log("Installing Linux x64 dependencies...");
       execSync(
         "npm install @rollup/rollup-linux-x64-gnu @swc/core-linux-x64-gnu",
         { stdio: "inherit" },
       );
-    } else if (platform === "win32" && arch === "x64") {
+    } else if (currentPlatform === "win32" && currentArch === "x64") {
       console.log("Installing Windows x64 dependencies...");
       execSync(
         "npm install @rollup/rollup-win32-x64-msvc @swc/core-win32-x64-msvc",
         { stdio: "inherit" },
       );
-    } else if (platform === "win32" && arch === "ia32") {
+    } else if (currentPlatform === "win32" && currentArch === "ia32") {
       console.log("Installing Windows x32 dependencies...");
       execSync(
         "npm install @rollup/rollup-win32-ia32-msvc @swc/core-win32-ia32-msvc",
         { stdio: "inherit" },
       );
-    } else if (platform === "darwin" && arch === "x64") {
+    } else if (currentPlatform === "darwin" && currentArch === "x64") {
       console.log("Installing macOS x64 dependencies...");
       execSync("npm install @rollup/rollup-darwin-x64 @swc/core-darwin-x64", {
         stdio: "inherit",
       });
-    } else if (platform === "darwin" && arch === "arm64") {
+    } else if (currentPlatform === "darwin" && currentArch === "arm64") {
       console.log("Installing macOS ARM64 dependencies...");
       execSync(
         "npm install @rollup/rollup-darwin-arm64 @swc/core-darwin-arm64",
@@ -40,7 +40,7 @@ function installPlatformSpecificDependencies() {
       );
     } else {
       console.log(
-        `Platform ${platform} ${arch} detected. Using fallback dependencies.`,
+        `Platform ${currentPlatform} ${currentArch} detected. Using fallback dependencies.`,
       );
       // Most platforms should work with the default packages
     }
@@ -57,9 +57,9 @@ function installPlatformSpecificDependencies() {
   }
 }
 
-// Only run if this is not being executed during npm install of this package itself
-if (require.main === module) {
+// Only run if this is being executed directly
+if (import.meta.url === import.meta.resolve('./postinstall.js')) {
   installPlatformSpecificDependencies();
 }
 
-module.exports = { installPlatformSpecificDependencies };
+export { installPlatformSpecificDependencies };
