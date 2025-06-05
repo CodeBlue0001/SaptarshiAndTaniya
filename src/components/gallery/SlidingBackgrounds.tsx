@@ -64,11 +64,11 @@ export const SlidingBackgrounds: React.FC<SlidingBackgroundsProps> = ({
 
         // Add some default beautiful wedding backgrounds
         const defaultBackgrounds = [
-            {
-              id: "default-1",
-              url:
-                "data:image/svg+xml;base64," +
-                btoa(`
+          {
+            id: "default-1",
+            url:
+              "data:image/svg+xml;base64," +
+              btoa(`
                 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
                   <defs>
                     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -84,14 +84,14 @@ export const SlidingBackgrounds: React.FC<SlidingBackgroundsProps> = ({
                   <circle cx="1600" cy="800" r="120" fill="#8b5cf6" opacity="0.1"/>
                 </svg>
               `),
-              name: "Romantic Gradient",
-              uploadedAt: new Date(),
-            },
-            {
-              id: "default-2",
-              url:
-                "data:image/svg+xml;base64," +
-                btoa(`
+            name: "Romantic Gradient",
+            uploadedAt: new Date(),
+          },
+          {
+            id: "default-2",
+            url:
+              "data:image/svg+xml;base64," +
+              btoa(`
                 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
                   <defs>
                     <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -106,14 +106,14 @@ export const SlidingBackgrounds: React.FC<SlidingBackgroundsProps> = ({
                   <polygon points="200,600 400,650 350,850 150,800" fill="#84cc16" opacity="0.1"/>
                 </svg>
               `),
-              name: "Garden Dreams",
-              uploadedAt: new Date(),
-            },
-            {
-              id: "default-3",
-              url:
-                "data:image/svg+xml;base64=" +
-                btoa(`
+            name: "Garden Dreams",
+            uploadedAt: new Date(),
+          },
+          {
+            id: "default-3",
+            url:
+              "data:image/svg+xml;base64=" +
+              btoa(`
                 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
                   <defs>
                     <radialGradient id="grad3" cx="50%" cy="50%" r="50%">
@@ -127,18 +127,19 @@ export const SlidingBackgrounds: React.FC<SlidingBackgroundsProps> = ({
                   <path d="M960,580 Q1200,780 960,980 Q720,780 960,580" fill="#dc2626" opacity="0.1"/>
                 </svg>
               `),
-              name: "Sunset Bliss",
-              uploadedAt: new Date(),
-            },
-          ];
-          setBackgrounds(defaultBackgrounds);
-          localStorage.setItem(
-            "wedding_gallery_backgrounds",
-            JSON.stringify(defaultBackgrounds),
-          );
-        }
+            name: "Sunset Bliss",
+            uploadedAt: new Date(),
+          },
+        ];
+        setBackgrounds(defaultBackgrounds);
+        localStorage.setItem(
+          "wedding_gallery_backgrounds",
+          JSON.stringify(defaultBackgrounds),
+        );
       } catch (error) {
         console.error("Failed to load backgrounds:", error);
+        // Set empty backgrounds on error to prevent crashes
+        setBackgrounds([]);
       }
     };
 
@@ -178,8 +179,8 @@ export const SlidingBackgrounds: React.FC<SlidingBackgroundsProps> = ({
           const result = e.target?.result as string;
 
           // Validate the result
-          if (!result || typeof result !== 'string') {
-            throw new Error('Invalid file data');
+          if (!result || typeof result !== "string") {
+            throw new Error("Invalid file data");
           }
 
           const newBackground: BackgroundImage = {
@@ -195,20 +196,19 @@ export const SlidingBackgrounds: React.FC<SlidingBackgroundsProps> = ({
 
               // Check localStorage space before saving
               const testData = JSON.stringify(updated);
-              if (testData.length > 4 * 1024 * 1024) { // 4MB limit
-                throw new Error('Storage limit exceeded');
+              if (testData.length > 4 * 1024 * 1024) {
+                // 4MB limit
+                throw new Error("Storage limit exceeded");
               }
 
-              localStorage.setItem(
-                "wedding_gallery_backgrounds",
-                testData,
-              );
+              localStorage.setItem("wedding_gallery_backgrounds", testData);
               return updated;
             } catch (storageError) {
-              console.error('Failed to save backgrounds:', storageError);
+              console.error("Failed to save backgrounds:", storageError);
               toast({
                 title: "Storage warning",
-                description: "Background saved temporarily. Clear some data to make it permanent.",
+                description:
+                  "Background saved temporarily. Clear some data to make it permanent.",
                 variant: "destructive",
               });
               return [...prev, newBackground]; // Still add to state, just don't persist
@@ -220,7 +220,7 @@ export const SlidingBackgrounds: React.FC<SlidingBackgroundsProps> = ({
             description: `${file.name} has been added to the slideshow.`,
           });
         } catch (error) {
-          console.error('Failed to process background image:', error);
+          console.error("Failed to process background image:", error);
           toast({
             title: "Upload failed",
             description: `Failed to process ${file.name}. Please try a smaller image.`,
